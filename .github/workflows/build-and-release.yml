@@ -36,13 +36,13 @@ jobs:
         run: flutter build apk --release
 
       - name: Rename APK
-        run: mv build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/bracket-release.apk
+        run: mv build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/EcoTV-release.apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: bracket-apk
-          path: build/app/outputs/flutter-apk/bracket-release.apk
+          name: EcoTV-apk
+          path: build/app/outputs/flutter-apk/EcoTV-release.apk
 
   build_ios:
     name: Build iOS IPA
@@ -68,15 +68,15 @@ jobs:
           flutter build ios --release --no-codesign
           mkdir -p Payload
           cp -r build/ios/iphoneos/Runner.app Payload
-          zip -r bracket-unsigned.ipa Payload
+          zip -r EcoTV-unsigned.ipa Payload
           mkdir -p build/ios/ipa
-          mv bracket-unsigned.ipa build/ios/ipa/
+          mv EcoTV-unsigned.ipa build/ios/ipa/
 
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
-          name: bracket-ipa
-          path: build/ios/ipa/bracket-unsigned.ipa
+          name: EcoTV-ipa
+          path: build/ios/ipa/EcoTV-unsigned.ipa
 
   release:
     name: Create GitHub Release
@@ -93,7 +93,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            bracket-apk/*.apk
-            bracket-ipa/*.ipa
+            EcoTV-apk/*.apk
+            EcoTV-ipa/*.ipa
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
