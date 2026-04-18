@@ -128,14 +128,14 @@ class SearchList extends StatefulWidget {
 class _SearchListState extends State<SearchList> {
   bool _loading = false;
   bool _bootstrapping = true;
+  bool _finish = false;
   final ScrollController _scrollController = ScrollController();
   List<ListData> _list = [];
   int _current = 1;
-  int _total = 0;
 
   Future<void> _fetchData() async {
     SearchStore searchStore = context.read<SearchStore>();
-    if (_loading) return;
+    if (_loading || _finish) return;
     setState(() {
       _loading = true;
     });
@@ -152,17 +152,31 @@ class _SearchListState extends State<SearchList> {
     }
     if (res != null && res.runtimeType != String) {
       SearchFilm jsonData = SearchFilm.fromJson(res);
+      final page = jsonData.data?.page;
+      final responseCurrent = page?.current ?? 1;
+      final responsePageCount = page?.pageCount ?? 0;
+      final responseTotal = page?.total ?? 0;
+      final responseList = jsonData.data?.list ?? <ListData>[];
+
       setState(() {
         _bootstrapping = false;
         _loading = false;
-        _current = jsonData.data?.page?.current ?? 1;
-        _total = jsonData.data?.page?.total ?? 0;
+        _current = responseCurrent;
         if (_current == 1) {
-          _list = jsonData.data?.list ?? [];
+          _list = responseList;
         } else {
-          _list.addAll(jsonData.data?.list ?? []);
+          _list.addAll(responseList);
         }
-        if (_list.length < _total) _current = _current + 1;
+
+        final paginationState = resolvePaginationState(
+          currentPage: responseCurrent,
+          total: responseTotal,
+          totalPages: responsePageCount,
+          receivedItemCount: responseList.length,
+          accumulatedItemCount: _list.length,
+        );
+        _finish = paginationState.isFinished;
+        _current = paginationState.nextPage;
       });
     } else {
       await Future.delayed(const Duration(seconds: 2));
@@ -230,7 +244,7 @@ class _SearchListState extends State<SearchList> {
     );
   }
 
-  Widget _loadMoreWidget(list) {
+  Widget _loadMoreWidget(List<ListData> list) {
     return Align(
       heightFactor: 2,
       alignment: Alignment.center,
@@ -245,7 +259,7 @@ class _SearchListState extends State<SearchList> {
                 ),
               ),
             )
-          : list.length == _total
+          : _finish
               ? const Text('暂无更多数据')
               : const Text('上拉加载'),
     );

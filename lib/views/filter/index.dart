@@ -34,7 +34,6 @@ class _FilterPageState extends State<FilterPage>
 
   List<dynamic> _list = [];
   int _current = 1;
-  int _total = 0;
   bool _finish = false;
   Map? _request = {};
 
@@ -102,26 +101,35 @@ class _FilterPageState extends State<FilterPage>
     });
     if (res != null && res.runtimeType != String) {
       FilmClassifySearch jsonData = FilmClassifySearch.fromJson(res);
+      final page = jsonData.data?.page;
+      final responseCurrent = page?.current ?? 1;
+      final responsePageCount = page?.pageCount ?? 0;
+      final responseTotal = page?.total ?? 0;
+      final responseList = jsonData.data?.list ?? [];
+
       setState(() {
         _loading = false;
         _data = jsonData.data;
         _request = _data?.params?.toJson();
 
-        _current = jsonData.data?.page?.current ?? 1;
-        _total = jsonData.data?.page?.total ?? 0;
+        _current = responseCurrent;
 
         if (_current == 1) {
-          _list = _data?.list ?? [];
+          _list = responseList;
           if (_scrollController.hasClients) _scrollController.jumpTo(0);
         } else {
-          _list.addAll(_data?.list ?? []);
+          _list.addAll(responseList);
         }
 
-        if (_list.length >= _total) {
-          _finish = true;
-        }
-
-        _current = _current + 1;
+        final paginationState = resolvePaginationState(
+          currentPage: responseCurrent,
+          total: responseTotal,
+          totalPages: responsePageCount,
+          receivedItemCount: responseList.length,
+          accumulatedItemCount: _list.length,
+        );
+        _finish = paginationState.isFinished;
+        _current = paginationState.nextPage;
       });
     } else {
       await Future.delayed(const Duration(seconds: 2));
@@ -289,7 +297,7 @@ class _FilterPageState extends State<FilterPage>
       alignment: Alignment.center,
       child: _loading
           ? const Loading()
-          : _list.length == _total
+          : _finish
               ? const Text('暂无更多数据')
               : const Text('上拉加载'),
     );
