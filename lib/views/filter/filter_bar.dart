@@ -1,8 +1,9 @@
 import '/model/film_classify_search/search.dart';
+import '/model/film_classify_search/category.dart';
 import '/plugins.dart';
 
 class FilterBar extends StatelessWidget {
-  final Map<String, dynamic>? activeMap;
+  final Map<String, Category>? activeMap;
   final Search? search;
   final Function onSearch;
   final bool loading;
@@ -19,22 +20,25 @@ class FilterBar extends StatelessWidget {
     return search?.sortList;
   }
 
-  Map<String, dynamic> get _titles {
-    Map<String, dynamic> map = {};
-    var titles = search?.titles?.toJson();
+  Map<String, String> get _titles {
+    final map = <String, String>{};
+    final titles = search?.titles?.values ?? {};
     _sortList?.forEach(
       (e) {
-        map[e] = titles?[e];
+        map[e] = titles[e] ?? e;
       },
     );
     return map;
   }
 
-  Map<String, dynamic> get _tags {
-    Map<String, dynamic> map = {};
-    var jsonTags = search?.tags?.toJson();
+  Map<String, List<Category>> get _tags {
+    final map = <String, List<Category>>{};
+    final tags = search?.tags?.values ?? {};
     _sortList?.forEach((e) {
-      map[e] = jsonTags?[e];
+      final options = tags[e] ?? [];
+      if (options.isNotEmpty) {
+        map[e] = options;
+      }
     });
     return map;
   }
@@ -64,7 +68,7 @@ class FilterBar extends StatelessWidget {
                       padding: const EdgeInsets.only(
                         left: 12,
                       ),
-                      child: Text(_titles[key]),
+                      child: Text(_titles[key] ?? key),
                     ),
                   ),
                   Expanded(
@@ -74,19 +78,21 @@ class FilterBar extends StatelessWidget {
                       scrollDirection: Axis.horizontal,
                       child: Wrap(
                         spacing: 8,
-                        children: _tags[key]?.map<ChoiceChip>((e) {
+                        children: (_tags[key] ?? []).map<ChoiceChip>((e) {
                           return ChoiceChip(
                             label: Text(
-                              (e?.name ?? ''),
+                              (e.name ?? ''),
                             ),
-                            selected: activeMap?[key]?.value == e?.value,
+                            selected: activeMap?[key]?.value == e.value,
                             onSelected: !loading
                                 ? (newValue) {
                                     Map params = {};
                                     activeMap?.forEach((k, v) {
-                                      params[k] =
-                                          k == key ? e?.value : v?.value;
+                                      params[k] = k == key ? e.value : v.value;
                                     });
+                                    if (activeMap?[key] == null) {
+                                      params[key] = e.value;
+                                    }
                                     onSearch(params);
                                   }
                                 : null,

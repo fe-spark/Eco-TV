@@ -3,6 +3,7 @@
 // import 'package:flutter/cupertino.dart';
 
 import '/plugins.dart';
+import '/model/film_classify_search/category.dart';
 import '/model/film_classify_search/film_classify_search.dart';
 import '/model/film_classify_search/search.dart';
 import '/model/film_classify_search/data.dart';
@@ -56,23 +57,28 @@ class _FilterPageState extends State<FilterPage>
     return map;
   }
 
-  Map<String, dynamic>? get _tags {
-    Map<String, dynamic> map = {};
-    var jsonTags = _search?.tags?.toJson();
+  Map<String, Category> get _tags {
+    final map = <String, Category>{};
+    final tags = _search?.tags?.values ?? {};
     _sortList?.forEach((e) {
       var value = _params[e];
-      map[e] = jsonTags?[e].firstWhere((e) => e?.value == value);
+      final options = tags[e] ?? [];
+      final active = options.where((item) => item.value == value).firstOrNull;
+      if (active != null) {
+        map[e] = active;
+      }
     });
     return map;
   }
 
-  List _getTags() {
-    List? arr = [];
-    _tags?.keys.forEach((e) {
-      if (_tags?[e].value != null && _tags?[e].value != '') {
-        arr.add(_tags?[e]);
+  List<Category> _getTags() {
+    List<Category> arr = [];
+    for (final e in _tags.keys) {
+      final tag = _tags[e];
+      if (tag?.value != null && tag?.value != '') {
+        arr.add(tag!);
       }
-    });
+    }
     return arr;
   }
 
