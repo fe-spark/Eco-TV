@@ -30,7 +30,7 @@ jobs:
         run: flutter pub get
 
       - name: Run build_runner
-        run: flutter pub run build_runner build --delete-conflicting-outputs
+        run: dart run build_runner build --delete-conflicting-outputs
 
       - name: Build APK
         run: flutter build apk --release
@@ -61,7 +61,7 @@ jobs:
         run: flutter pub get
 
       - name: Run build_runner
-        run: flutter pub run build_runner build --delete-conflicting-outputs
+        run: dart run build_runner build --delete-conflicting-outputs
 
       - name: Build IPA (Unsigned)
         run: |

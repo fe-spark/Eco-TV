@@ -10,10 +10,10 @@ Recommend _$RecommendFromJson(Map<String, dynamic> json) => Recommend(
       data: json['data'] == null
           ? null
           : Data.fromJson(json['data'] as Map<String, dynamic>),
-      status: json['status'] as String?,
+      code: (json['code'] as num?)?.toInt(),
     );
 
 Map<String, dynamic> _$RecommendToJson(Recommend instance) => <String, dynamic>{
       'data': instance.data,
-      'status': instance.status,
+      'code': instance.code,
     };

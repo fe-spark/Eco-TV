@@ -74,7 +74,10 @@ class _DetailPageState extends State<DetailPage> {
   final List<MyTab> _tabs = [
     MyTab(icon: const Icon(Icons.abc_outlined), label: '详情', key: UniqueKey()),
     MyTab(
-        icon: const Icon(Icons.abc_outlined), label: '相关推荐', key: UniqueKey()),
+      icon: const Icon(Icons.abc_outlined),
+      label: '相关推荐',
+      key: UniqueKey(),
+    ),
   ];
 
   Data? _data;
@@ -91,13 +94,54 @@ class _DetailPageState extends State<DetailPage> {
   bool _debugAndroidCastOverlayVisible =
       kDebugMode && _debugForceAndroidCastOverlay;
 
+  int _resolveOriginIndex(Data? data, Map<String, dynamic>? historyItem) {
+    final playSourceList = data?.detail?.list;
+    if (playSourceList == null || playSourceList.isEmpty) {
+      return 0;
+    }
+
+    final historyOriginId = historyItem?['originId'];
+    if (historyOriginId != null) {
+      final historyIndex = playSourceList.indexWhere(
+        (element) => historyOriginId == element.id,
+      );
+      if (historyIndex >= 0) {
+        return historyIndex;
+      }
+    }
+
+    final currentPlayFrom = data?.currentPlayFrom;
+    if (currentPlayFrom != null && currentPlayFrom.isNotEmpty) {
+      final currentIndex = playSourceList.indexWhere(
+        (element) => currentPlayFrom == element.id,
+      );
+      if (currentIndex >= 0) {
+        return currentIndex;
+      }
+    }
+
+    return 0;
+  }
+
+  int _resolveTeleplayIndex(Data? data, Map<String, dynamic>? historyItem) {
+    final historyTeleplayIndex = historyItem?['teleplayIndex'];
+    if (historyTeleplayIndex is int && historyTeleplayIndex >= 0) {
+      return historyTeleplayIndex;
+    }
+
+    final currentEpisode = data?.currentEpisode;
+    if (currentEpisode != null && currentEpisode >= 0) {
+      return currentEpisode;
+    }
+
+    return 0;
+  }
+
   Future _fetchData(id) async {
     var playIdsInfo = context.read<PlayVideoIdsStore>();
-    var res = await Api.filmDetail(
+    var res = await Api.filmPlayInfo(
       context: context,
-      queryParameters: {
-        'id': id,
-      },
+      queryParameters: {'id': id},
     );
     if (res != null && res.runtimeType != String) {
       FilmPlayInfo jsonData = FilmPlayInfo.fromJson(res);
@@ -106,20 +150,15 @@ class _DetailPageState extends State<DetailPage> {
       });
 
       var item = getHistory(id);
+      final originIndex = _resolveOriginIndex(_data, item);
+      final teleplayIndex = _resolveTeleplayIndex(_data, item);
+      final startAt = item?['startAt'] ?? 0;
 
-      if (item != null) {
-        var originId = item['originId'];
-        var originIndex = _data?.detail?.list
-            ?.indexWhere((element) => originId == element.id);
-
-        playIdsInfo.setVideoInfo(
-          (originIndex != null && originIndex >= 0) ? originIndex : 0,
-          teleplayIndex: item['teleplayIndex'] ?? 0,
-          startAt: item['startAt'] ?? 0,
-        );
-      } else {
-        playIdsInfo.setVideoInfo(0, teleplayIndex: 0, startAt: 0);
-      }
+      playIdsInfo.setVideoInfo(
+        originIndex,
+        teleplayIndex: teleplayIndex,
+        startAt: startAt,
+      );
     }
   }
 
@@ -131,8 +170,10 @@ class _DetailPageState extends State<DetailPage> {
   }
 
   AndroidCastMedia? _resolveAndroidCastMedia(
-      Detail? detail, PlayVideoIdsStore playVideoIdsStore,
-      {int positionSeconds = 0}) {
+    Detail? detail,
+    PlayVideoIdsStore playVideoIdsStore, {
+    int positionSeconds = 0,
+  }) {
     final list = detail?.list;
     if (detail == null || list == null || list.isEmpty) return null;
 
@@ -140,8 +181,10 @@ class _DetailPageState extends State<DetailPage> {
     final linkList = list[originIndex].linkList;
     if (linkList == null || linkList.isEmpty) return null;
 
-    final teleplayIndex =
-        (playVideoIdsStore.teleplayIndex ?? 0).clamp(0, linkList.length - 1);
+    final teleplayIndex = (playVideoIdsStore.teleplayIndex ?? 0).clamp(
+      0,
+      linkList.length - 1,
+    );
     final playItem = linkList[teleplayIndex];
     final url = playItem.link;
     if (url == null || url.isEmpty) return null;
@@ -192,16 +235,14 @@ class _DetailPageState extends State<DetailPage> {
     final teleplayIndex = _playVideoIdsStore?.teleplayIndex;
     final linkList =
         list != null && list.isNotEmpty && originIndex < list.length
-            ? list[originIndex].linkList ?? const []
-            : const [];
+        ? list[originIndex].linkList ?? const []
+        : const [];
     final hasPrev = teleplayIndex != null && teleplayIndex > 0;
-    final hasNext = teleplayIndex != null &&
+    final hasNext =
+        teleplayIndex != null &&
         teleplayIndex >= 0 &&
         teleplayIndex < linkList.length - 1;
-    return PlayerNextEpisodeAvailability(
-      hasPrev: hasPrev,
-      hasNext: hasNext,
-    );
+    return PlayerNextEpisodeAvailability(hasPrev: hasPrev, hasNext: hasNext);
   }
 
   void _handleSelectedMediaChanged() {
@@ -344,9 +385,11 @@ class _DetailPageState extends State<DetailPage> {
 
   bool _shouldAdvanceForActiveAndroidCast(AndroidCastPlaybackStatus status) {
     final previousState = _lastAndroidCastTransportState;
-    final previousNearEnd = _lastAndroidCastDurationSeconds > 0 &&
+    final previousNearEnd =
+        _lastAndroidCastDurationSeconds > 0 &&
         _lastAndroidCastPositionSeconds >= _lastAndroidCastDurationSeconds - 3;
-    final currentNearEnd = status.durationSeconds > 0 &&
+    final currentNearEnd =
+        status.durationSeconds > 0 &&
         status.positionSeconds >= status.durationSeconds - 2;
 
     return status.isTerminal &&
@@ -461,7 +504,8 @@ class _DetailPageState extends State<DetailPage> {
       _startAndroidCastStatusPolling();
     } on PlatformException catch (error) {
       debugPrint(
-          'Failed to recast active media: ${error.message ?? error.code}');
+        'Failed to recast active media: ${error.message ?? error.code}',
+      );
       if (!mounted) return;
       final messenger = ScaffoldMessenger.of(context);
       messenger.hideCurrentSnackBar();
@@ -474,9 +518,7 @@ class _DetailPageState extends State<DetailPage> {
       if (!mounted) return;
       final messenger = ScaffoldMessenger.of(context);
       messenger.hideCurrentSnackBar();
-      messenger.showSnackBar(
-        const SnackBar(content: Text('投屏切集失败')),
-      );
+      messenger.showSnackBar(const SnackBar(content: Text('投屏切集失败')));
       await _clearActiveAndroidCastSession(clearNative: false);
     } finally {
       _syncingActiveAndroidCast = false;
@@ -492,9 +534,7 @@ class _DetailPageState extends State<DetailPage> {
     }
   }
 
-  Future<void> _clearActiveAndroidCastSession({
-    bool clearNative = true,
-  }) async {
+  Future<void> _clearActiveAndroidCastSession({bool clearNative = true}) async {
     _androidCastStatusTimer?.cancel();
     if (!mounted) return;
     setState(() {
@@ -545,9 +585,7 @@ class _DetailPageState extends State<DetailPage> {
       await _clearActiveAndroidCastSession(clearNative: false);
 
       messenger?.hideCurrentSnackBar();
-      messenger?.showSnackBar(
-        const SnackBar(content: Text('已结束投屏')),
-      );
+      messenger?.showSnackBar(const SnackBar(content: Text('已结束投屏')));
     } on PlatformException catch (error) {
       if (!mounted) return;
       setState(() {
@@ -567,15 +605,14 @@ class _DetailPageState extends State<DetailPage> {
       _startAndroidCastStatusPolling();
 
       messenger?.hideCurrentSnackBar();
-      messenger?.showSnackBar(
-        const SnackBar(content: Text('结束投屏失败')),
-      );
+      messenger?.showSnackBar(const SnackBar(content: Text('结束投屏失败')));
     }
   }
 
   Widget _buildAndroidCastOverlay() {
     final availability = _currentEpisodeAvailability();
-    final actionBusy = _syncingActiveAndroidCast ||
+    final actionBusy =
+        _syncingActiveAndroidCast ||
         _advancingActiveAndroidCast ||
         _endingActiveAndroidCast;
 
@@ -589,8 +626,8 @@ class _DetailPageState extends State<DetailPage> {
       final enabled = onTap != null;
       final backgroundColor = primary
           ? (enabled
-              ? const Color(0xFFFF8A2B)
-              : Colors.white.withValues(alpha: 0.10))
+                ? const Color(0xFFFF8A2B)
+                : Colors.white.withValues(alpha: 0.10))
           : Colors.black.withValues(alpha: enabled ? 0.28 : 0.16);
       final iconColor = primary
           ? Colors.white.withValues(alpha: enabled ? 1 : 0.44)
@@ -620,8 +657,9 @@ class _DetailPageState extends State<DetailPage> {
                   boxShadow: primary && enabled
                       ? [
                           BoxShadow(
-                            color:
-                                const Color(0xFFFF8A2B).withValues(alpha: 0.34),
+                            color: const Color(
+                              0xFFFF8A2B,
+                            ).withValues(alpha: 0.34),
                             blurRadius: 18,
                             offset: const Offset(0, 6),
                           ),
@@ -652,15 +690,13 @@ class _DetailPageState extends State<DetailPage> {
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [
-                Color(0xFF202833),
-                Color(0xFF12171E),
-              ],
+              colors: [Color(0xFF202833), Color(0xFF12171E)],
             ),
           ),
           child: LayoutBuilder(
             builder: (context, overlayConstraints) {
-              final compact = overlayConstraints.maxHeight < 240 ||
+              final compact =
+                  overlayConstraints.maxHeight < 240 ||
                   overlayConstraints.maxWidth < 320;
               final primarySize = compact ? 58.0 : 66.0;
               final secondarySize = compact ? 44.0 : 50.0;
@@ -710,7 +746,8 @@ class _DetailPageState extends State<DetailPage> {
                                   onTap: availability.hasPrev && !actionBusy
                                       ? () {
                                           unawaited(
-                                              _retreatActiveAndroidCastEpisode());
+                                            _retreatActiveAndroidCastEpisode(),
+                                          );
                                         }
                                       : null,
                                 ),
@@ -725,7 +762,8 @@ class _DetailPageState extends State<DetailPage> {
                                   onTap: availability.hasNext && !actionBusy
                                       ? () {
                                           unawaited(
-                                              _advanceActiveAndroidCastEpisode());
+                                            _advanceActiveAndroidCastEpisode(),
+                                          );
                                         }
                                       : null,
                                 ),
@@ -769,7 +807,8 @@ class _DetailPageState extends State<DetailPage> {
       playVideoIdsStore,
       positionSeconds: _playerPlaybackController.positionSeconds,
     );
-    final showCastButton = AirPlayRoutePickerButton.isSupported &&
+    final showCastButton =
+        AirPlayRoutePickerButton.isSupported &&
         (Platform.isIOS || androidCastMedia != null);
     final activeAndroidCastSession = _activeAndroidCastSession;
     final debugAndroidCastSession = _showingDebugAndroidCastOverlay
@@ -799,9 +838,7 @@ class _DetailPageState extends State<DetailPage> {
               Expanded(
                 flex: orientation == Orientation.portrait ? 0 : 1,
                 child: Container(
-                  decoration: const BoxDecoration(
-                    color: Colors.black,
-                  ),
+                  decoration: const BoxDecoration(color: Colors.black),
                   child: SafeArea(
                     bottom: orientation != Orientation.portrait,
                     right: orientation == Orientation.portrait,
@@ -863,8 +900,9 @@ class _DetailPageState extends State<DetailPage> {
                                           ),
                                           decoration: BoxDecoration(
                                             color: const Color(0x593B2209),
-                                            borderRadius:
-                                                BorderRadius.circular(999),
+                                            borderRadius: BorderRadius.circular(
+                                              999,
+                                            ),
                                             border: Border.all(
                                               color: const Color(0x80FF9A3D),
                                             ),
@@ -907,22 +945,26 @@ class _DetailPageState extends State<DetailPage> {
                                             iconScale: 0.94,
                                             padding: const EdgeInsets.all(6),
                                             active: showAndroidCastStatus,
-                                            activeIconColor:
-                                                const Color(0xFFFFB067),
+                                            activeIconColor: const Color(
+                                              0xFFFFB067,
+                                            ),
                                             backgroundColor: const Color(
                                               0x59000000,
                                             ),
                                             androidMediaBuilder: () =>
                                                 _resolveAndroidCastMedia(
-                                              _data?.detail,
-                                              context.read<PlayVideoIdsStore>(),
-                                              positionSeconds:
-                                                  _playerPlaybackController
-                                                      .positionSeconds,
-                                            ),
+                                                  _data?.detail,
+                                                  context
+                                                      .read<
+                                                        PlayVideoIdsStore
+                                                      >(),
+                                                  positionSeconds:
+                                                      _playerPlaybackController
+                                                          .positionSeconds,
+                                                ),
                                             androidMedia: androidCastMedia,
-                                            onAndroidCastConnected: Platform
-                                                    .isAndroid
+                                            onAndroidCastConnected:
+                                                Platform.isAndroid
                                                 ? _handleAndroidCastConnected
                                                 : null,
                                           ),
@@ -931,7 +973,7 @@ class _DetailPageState extends State<DetailPage> {
                                   ],
                                 ),
                               ),
-                            )
+                            ),
                           ],
                         );
                       },
@@ -942,10 +984,9 @@ class _DetailPageState extends State<DetailPage> {
               if (orientation == Orientation.portrait)
                 Container(
                   height: 8,
-                  color: Theme.of(context)
-                      .colorScheme
-                      .surfaceContainerHighest
-                      .withValues(alpha: 0.4),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
                 )
               else
                 Padding(
@@ -996,8 +1037,9 @@ class _DetailPageState extends State<DetailPage> {
                             child: Transform.translate(
                               offset: Offset(0, -tabContentOverlap),
                               child: ColoredBox(
-                                color:
-                                    Theme.of(context).scaffoldBackgroundColor,
+                                color: Theme.of(
+                                  context,
+                                ).scaffoldBackgroundColor,
                                 child: TabBarView(
                                   children: [
                                     Series(data: _data),
@@ -1007,7 +1049,7 @@ class _DetailPageState extends State<DetailPage> {
                               ),
                             ),
                           ),
-                        )
+                        ),
                       ],
                     ),
                   ),

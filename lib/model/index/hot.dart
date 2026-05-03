@@ -3,9 +3,14 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'hot.g.dart';
 
+Object? _readMovieId(Map json, String key) => json['id'] ?? json['ID'];
+
+Object? _readCategoryName(Map json, String key) =>
+    json['cName'] ?? json['CName'];
+
 @JsonSerializable()
 class Hot {
-  @JsonKey(name: 'ID')
+  @JsonKey(readValue: _readMovieId)
   final int? id;
   @JsonKey(name: 'CreatedAt')
   final String? createdAt;
@@ -18,12 +23,12 @@ class Hot {
   final int? pid;
   final String? name;
   final String? subTitle;
-  @JsonKey(name: 'CName')
+  @JsonKey(readValue: _readCategoryName)
   final String? cName;
   final String? classTag;
   final String? area;
   final String? language;
-  final int? year;
+  final String? year;
   final String? initial;
   // final int? score;
   final int? updateStamp;
@@ -79,7 +84,7 @@ class Hot {
     String? classTag,
     String? area,
     String? language,
-    int? year,
+    String? year,
     String? initial,
     int? score,
     int? updateStamp,

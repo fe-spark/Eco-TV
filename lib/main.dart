@@ -19,36 +19,36 @@ void main() async {
 
   /// 初始持久化数据
   await PreferenceUtil.getInstance();
-  await Future.delayed(const Duration(seconds: 2));
   // PreferenceUtil.clear();
 
-  watchConnectivity(null, () {
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider<ThemeStore>(
+          create: (_) => ThemeStore(),
+        ),
+        ChangeNotifierProvider<UserStore>(
+          create: (_) => UserStore(),
+        ),
+        ChangeNotifierProvider<SearchStore>(
+          create: (_) => SearchStore(),
+        ),
+        ChangeNotifierProvider<HistoryStore>(
+          create: (_) => HistoryStore(),
+        ),
+        ChangeNotifierProvider<VideoSourceStore>(
+          create: (_) => VideoSourceStore(),
+        ),
+        ChangeNotifierProvider<PlayVideoIdsStore>(
+          create: (_) => PlayVideoIdsStore(),
+        ),
+      ],
+      child: const MyApp(),
+    ),
+  );
+
+  WidgetsBinding.instance.addPostFrameCallback((_) {
     FlutterNativeSplash.remove();
-    runApp(
-      MultiProvider(
-        providers: [
-          ChangeNotifierProvider<ThemeStore>(
-            create: (_) => ThemeStore(),
-          ),
-          ChangeNotifierProvider<UserStore>(
-            create: (_) => UserStore(),
-          ),
-          ChangeNotifierProvider<SearchStore>(
-            create: (_) => SearchStore(),
-          ),
-          ChangeNotifierProvider<HistoryStore>(
-            create: (_) => HistoryStore(),
-          ),
-          ChangeNotifierProvider<VideoSourceStore>(
-            create: (_) => VideoSourceStore(),
-          ),
-          ChangeNotifierProvider<PlayVideoIdsStore>(
-            create: (_) => PlayVideoIdsStore(),
-          ),
-        ],
-        child: const MyApp(),
-      ),
-    );
   });
 }
 

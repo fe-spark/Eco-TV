@@ -7,7 +7,7 @@ part of 'hot.dart';
 // **************************************************************************
 
 Hot _$HotFromJson(Map<String, dynamic> json) => Hot(
-      id: (json['ID'] as num?)?.toInt(),
+      id: (json['id'] as num?)?.toInt() ?? (json['ID'] as num?)?.toInt(),
       createdAt: json['CreatedAt'] as String?,
       updatedAt: json['UpdatedAt'] as String?,
       deletedAt: json['DeletedAt'],
@@ -16,11 +16,11 @@ Hot _$HotFromJson(Map<String, dynamic> json) => Hot(
       pid: (json['pid'] as num?)?.toInt(),
       name: json['name'] as String?,
       subTitle: json['subTitle'] as String?,
-      cName: json['CName'] as String?,
+      cName: json['cName'] as String? ?? json['CName'] as String?,
       classTag: json['classTag'] as String?,
       area: json['area'] as String?,
       language: json['language'] as String?,
-      year: (json['year'] as num?)?.toInt(),
+      year: json['year']?.toString(),
       initial: json['initial'] as String?,
       updateStamp: (json['updateStamp'] as num?)?.toInt(),
       hits: (json['hits'] as num?)?.toInt(),

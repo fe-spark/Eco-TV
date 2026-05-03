@@ -8,12 +8,12 @@ part 'index.g.dart';
 @JsonSerializable()
 class Recommend {
   final Data? data;
-  final String? status;
+  final int? code;
 
-  const Recommend({this.data, this.status});
+  const Recommend({this.data, this.code});
 
   @override
-  String toString() => 'Recommend(data: $data, status: $status)';
+  String toString() => 'Recommend(data: $data, code: $code)';
 
   factory Recommend.fromJson(Map<String, dynamic> json) {
     return _$RecommendFromJson(json);
@@ -23,11 +23,11 @@ class Recommend {
 
   Recommend copyWith({
     Data? data,
-    String? status,
+    int? code,
   }) {
     return Recommend(
       data: data ?? this.data,
-      status: status ?? this.status,
+      code: code ?? this.code,
     );
   }
 
@@ -40,5 +40,5 @@ class Recommend {
   }
 
   @override
-  int get hashCode => data.hashCode ^ status.hashCode;
+  int get hashCode => data.hashCode ^ code.hashCode;
 }
