@@ -2,6 +2,7 @@
 
 import '/plugins.dart';
 import "package:bracket/model/film_play_info/detail.dart";
+import "package:bracket/model/film_play_info/relate.dart";
 import 'package:flutter/foundation.dart' show kDebugMode;
 import "/model/film_play_info/data.dart" show Data;
 import "/model/film_play_info/film_play_info.dart" show FilmPlayInfo;
@@ -81,6 +82,8 @@ class _DetailPageState extends State<DetailPage> {
   ];
 
   Data? _data;
+  List<Relate>? _relate;
+  bool _relateLoading = false;
   PlayVideoIdsStore? _playVideoIdsStore;
   _ActiveAndroidCastSession? _activeAndroidCastSession;
   Timer? _androidCastStatusTimer;
@@ -138,11 +141,18 @@ class _DetailPageState extends State<DetailPage> {
   }
 
   Future _fetchData(id) async {
+    setState(() {
+      _relate = null;
+      _relateLoading = true;
+    });
+    unawaited(_fetchRelate(id));
+
     var playIdsInfo = context.read<PlayVideoIdsStore>();
     var res = await Api.filmPlayInfo(
       context: context,
       queryParameters: {'id': id},
     );
+    if (!mounted) return;
     if (res != null && res.runtimeType != String) {
       FilmPlayInfo jsonData = FilmPlayInfo.fromJson(res);
       setState(() {
@@ -159,7 +169,35 @@ class _DetailPageState extends State<DetailPage> {
         teleplayIndex: teleplayIndex,
         startAt: startAt,
       );
+      return;
     }
+  }
+
+  Future<void> _fetchRelate(id) async {
+    var res = await Api.filmRelate(
+      context: context,
+      queryParameters: {'id': id},
+    );
+    if (!mounted) return;
+    if (res is Map<String, dynamic>) {
+      final rawList = res['data'];
+      final relate = rawList is List
+          ? rawList
+              .whereType<Map>()
+              .map((item) => Relate.fromJson(Map<String, dynamic>.from(item)))
+              .toList()
+          : <Relate>[];
+      setState(() {
+        _relate = relate;
+        _relateLoading = false;
+      });
+      return;
+    }
+
+    setState(() {
+      _relate = [];
+      _relateLoading = false;
+    });
   }
 
   Map<String, dynamic>? getHistory(id) {
@@ -235,11 +273,10 @@ class _DetailPageState extends State<DetailPage> {
     final teleplayIndex = _playVideoIdsStore?.teleplayIndex;
     final linkList =
         list != null && list.isNotEmpty && originIndex < list.length
-        ? list[originIndex].linkList ?? const []
-        : const [];
+            ? list[originIndex].linkList ?? const []
+            : const [];
     final hasPrev = teleplayIndex != null && teleplayIndex > 0;
-    final hasNext =
-        teleplayIndex != null &&
+    final hasNext = teleplayIndex != null &&
         teleplayIndex >= 0 &&
         teleplayIndex < linkList.length - 1;
     return PlayerNextEpisodeAvailability(hasPrev: hasPrev, hasNext: hasNext);
@@ -385,11 +422,9 @@ class _DetailPageState extends State<DetailPage> {
 
   bool _shouldAdvanceForActiveAndroidCast(AndroidCastPlaybackStatus status) {
     final previousState = _lastAndroidCastTransportState;
-    final previousNearEnd =
-        _lastAndroidCastDurationSeconds > 0 &&
+    final previousNearEnd = _lastAndroidCastDurationSeconds > 0 &&
         _lastAndroidCastPositionSeconds >= _lastAndroidCastDurationSeconds - 3;
-    final currentNearEnd =
-        status.durationSeconds > 0 &&
+    final currentNearEnd = status.durationSeconds > 0 &&
         status.positionSeconds >= status.durationSeconds - 2;
 
     return status.isTerminal &&
@@ -611,8 +646,7 @@ class _DetailPageState extends State<DetailPage> {
 
   Widget _buildAndroidCastOverlay() {
     final availability = _currentEpisodeAvailability();
-    final actionBusy =
-        _syncingActiveAndroidCast ||
+    final actionBusy = _syncingActiveAndroidCast ||
         _advancingActiveAndroidCast ||
         _endingActiveAndroidCast;
 
@@ -626,8 +660,8 @@ class _DetailPageState extends State<DetailPage> {
       final enabled = onTap != null;
       final backgroundColor = primary
           ? (enabled
-                ? const Color(0xFFFF8A2B)
-                : Colors.white.withValues(alpha: 0.10))
+              ? const Color(0xFFFF8A2B)
+              : Colors.white.withValues(alpha: 0.10))
           : Colors.black.withValues(alpha: enabled ? 0.28 : 0.16);
       final iconColor = primary
           ? Colors.white.withValues(alpha: enabled ? 1 : 0.44)
@@ -695,8 +729,7 @@ class _DetailPageState extends State<DetailPage> {
           ),
           child: LayoutBuilder(
             builder: (context, overlayConstraints) {
-              final compact =
-                  overlayConstraints.maxHeight < 240 ||
+              final compact = overlayConstraints.maxHeight < 240 ||
                   overlayConstraints.maxWidth < 320;
               final primarySize = compact ? 58.0 : 66.0;
               final secondarySize = compact ? 44.0 : 50.0;
@@ -807,8 +840,7 @@ class _DetailPageState extends State<DetailPage> {
       playVideoIdsStore,
       positionSeconds: _playerPlaybackController.positionSeconds,
     );
-    final showCastButton =
-        AirPlayRoutePickerButton.isSupported &&
+    final showCastButton = AirPlayRoutePickerButton.isSupported &&
         (Platform.isIOS || androidCastMedia != null);
     final activeAndroidCastSession = _activeAndroidCastSession;
     final debugAndroidCastSession = _showingDebugAndroidCastOverlay
@@ -953,18 +985,15 @@ class _DetailPageState extends State<DetailPage> {
                                             ),
                                             androidMediaBuilder: () =>
                                                 _resolveAndroidCastMedia(
-                                                  _data?.detail,
-                                                  context
-                                                      .read<
-                                                        PlayVideoIdsStore
-                                                      >(),
-                                                  positionSeconds:
-                                                      _playerPlaybackController
-                                                          .positionSeconds,
-                                                ),
+                                              _data?.detail,
+                                              context.read<PlayVideoIdsStore>(),
+                                              positionSeconds:
+                                                  _playerPlaybackController
+                                                      .positionSeconds,
+                                            ),
                                             androidMedia: androidCastMedia,
-                                            onAndroidCastConnected:
-                                                Platform.isAndroid
+                                            onAndroidCastConnected: Platform
+                                                    .isAndroid
                                                 ? _handleAndroidCastConnected
                                                 : null,
                                           ),
@@ -1043,7 +1072,11 @@ class _DetailPageState extends State<DetailPage> {
                                 child: TabBarView(
                                   children: [
                                     Series(data: _data),
-                                    Describe(data: _data),
+                                    Describe(
+                                      data: _data,
+                                      relate: _relate,
+                                      relateLoading: _relateLoading,
+                                    ),
                                   ],
                                 ),
                               ),

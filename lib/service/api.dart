@@ -29,6 +29,19 @@ class Api {
     );
   }
 
+  static Future filmRelate({
+    required BuildContext context,
+    Map<String, dynamic>? queryParameters,
+  }) {
+    final data = context.read<VideoSourceStore>().data;
+    final url = data?.actived ?? '';
+    return HttpUtil().get(
+      context,
+      getUrl(url, 'filmRelate'),
+      queryParameters: queryParameters,
+    );
+  }
+
   static Future searchFilm({
     required BuildContext context,
     Map<String, dynamic>? queryParameters,

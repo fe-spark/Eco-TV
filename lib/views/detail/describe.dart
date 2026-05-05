@@ -7,7 +7,15 @@ import '/plugins.dart';
 
 class Describe extends StatefulWidget {
   final Data? data;
-  const Describe({super.key, this.data});
+  final List<Relate>? relate;
+  final bool relateLoading;
+
+  const Describe({
+    super.key,
+    this.data,
+    this.relate,
+    this.relateLoading = false,
+  });
 
   @override
   State<Describe> createState() => _DescribeState();
@@ -19,28 +27,26 @@ class _DescribeState extends State<Describe> {
   // }
 
   List<Relate> get _relate {
-    return widget.data?.relate ?? [];
+    return widget.relate ?? widget.data?.relate ?? [];
   }
 
   @override
   Widget build(BuildContext context) {
-    return LoadingViewBuilder(
-      loading: widget.data == null,
-      builder: (_) => MediaQuery.removePadding(
-        context: context,
-        removeTop: true,
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          child: Padding(
-            padding:
-                const EdgeInsets.only(top: 12, left: 12, right: 12, bottom: 12),
-            child: Column(
-              children: [
-                Related(
-                  list: _relate,
-                )
-              ],
-            ),
+    return MediaQuery.removePadding(
+      context: context,
+      removeTop: true,
+      child: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        child: Padding(
+          padding:
+              const EdgeInsets.only(top: 12, left: 12, right: 12, bottom: 12),
+          child: Column(
+            children: [
+              Related(
+                list: _relate,
+                loading: widget.relateLoading,
+              )
+            ],
           ),
         ),
       ),

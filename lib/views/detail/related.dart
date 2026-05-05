@@ -4,8 +4,9 @@ import '/widgets/movie_grid_tile.dart';
 
 class Related extends StatefulWidget {
   final List<Relate> list;
+  final bool loading;
 
-  const Related({super.key, required this.list});
+  const Related({super.key, required this.list, this.loading = false});
 
   @override
   State<Related> createState() => _RelatedState();
@@ -14,6 +15,17 @@ class Related extends StatefulWidget {
 class _RelatedState extends State<Related> {
   @override
   Widget build(BuildContext context) {
+    if (widget.loading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 48),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (widget.list.isEmpty) {
+      return const NoDataView();
+    }
+
     final isLandscape =
         MediaQuery.orientationOf(context) == Orientation.landscape;
 
